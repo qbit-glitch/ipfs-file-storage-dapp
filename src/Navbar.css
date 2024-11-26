@@ -1,0 +1,41 @@
+/* Navbar.css */
+.navbar {
+    display: flex;
+    justify-content: center; /* Center align items */
+    align-items: center;
+    background-color: #1e1e1e; /* Darker background */
+    padding: 1rem 2rem; /* Increased padding for a spacious look */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* Subtle shadow for depth */
+}
+
+.navbar-title {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: bold; /* Bold title */
+    margin-right: auto; /* Pushes title to the left */
+}
+
+.navbar-links {
+    list-style: none;
+    display: flex;
+    gap: 30px; /* Increased gap for better spacing */
+    margin-left: auto; /* Pushes links to the right */
+}
+
+.navbar-links li {
+    display: inline;
+}
+
+.navbar-links a {
+    color: #ffffff;
+    text-decoration: none;
+    padding: 10px 15px; /* Added padding for clickable area */
+    border-radius: 5px; /* Rounded corners */
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.navbar-links a:hover {
+    background-color: #f0a500; /* Highlight background on hover */
+    color: #1e1e1e; /* Dark text on hover for contrast */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Shadow effect on hover */
+}

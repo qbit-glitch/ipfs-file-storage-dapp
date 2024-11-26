@@ -1,0 +1,58 @@
+/* Home.css */
+.home-container {
+    background-color: #121212; /* Dark background */
+    color: #ffffff; /* Light text */
+    min-height: 70vh; /* Full height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Center vertically */
+    align-items: center; /* Center horizontally */
+    text-align: center;
+    padding: 3rem; /* Added padding for spacing */
+    font-family: 'Arial', sans-serif; /* Modern font */
+}
+
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    font-weight: bold; /* Bold heading */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+}
+
+p {
+    font-size: 1.2rem;
+    line-height: 1.5; /* Improved readability */
+    max-width: 600px; /* Limit paragraph width */
+    margin: 0 auto; /* Center align */
+    padding: 2rem;
+}
+
+/* Button Styles */
+.button {
+    background-color: #f0a500; /* Primary button color */
+    color: #1e1e1e; /* Dark text */
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Transition effects */
+    margin-top: 20px; /* Space above button */
+}
+
+.button:hover {
+    background-color: #d18e00; /* Darker shade on hover */
+    transform: translateY(-2px); /* Lift effect on hover */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Shadow effect on hover */
+}
+
+/* Additional Styles for Links */
+a {
+    color: #f0a500; /* Link color */
+    text-decoration: none; /* Remove underline */
+    transition: color 0.3s ease; /* Transition for color change */
+}
+
+a:hover {
+    color: #d18e00; /* Darker shade on hover */
+}
