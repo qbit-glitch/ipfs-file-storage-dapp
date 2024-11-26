@@ -1,48 +1,53 @@
 import React, { useState, useEffect } from "react";
-import './WorkloadDashboard.css'; // Import the CSS file
+import './WorkloadDashboard.css';
 
 function WorkloadDashboard() {
-  const [numTransactions, setNumTransactions] = useState(5); // Default number of transactions
+  const [numTransactions, setNumTransactions] = useState(5);
   const [transactions, setTransactions] = useState([]);
-  const [totalTransactions, setTotalTransactions] = useState(0); // Total number of records
-  const [error, setError] = useState(null); // State to hold any error messages
+  const [totalTransactions, setTotalTransactions] = useState(0);
+  const [error, setError] = useState(null);
 
-  // Fetch the total number of transactions when the component mounts
+  // Backend base URL - adjust as needed
+  const BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
+  // Fetch total transactions
   useEffect(() => {
     const fetchTotalTransactions = async () => {
-        try {
-            const response = await fetch(`http://localhost:5000/api/transactions/count`);
-            if (!response.ok) {
-                throw new Error("Failed to fetch total transactions");
-            }
-            const data = await response.json();
-            setTotalTransactions(data.count); // Assuming the API returns an object with a count property
-        } catch (error) {
-            console.error("Error fetching total transactions:", error);
-            setError(error.message); // Set error message
+      try {
+        const response = await fetch(`${BASE_URL}/api/transactions/count`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const data = await response.json();
+        setTotalTransactions(data.count);
+      } catch (error) {
+        console.error("Error fetching total transactions:", error);
+        setError(error.message);
+      }
     };
 
     fetchTotalTransactions();
-}, []);
+  }, []);
 
   const handleRetrieveTransactions = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/transactions?limit=${numTransactions}`);
+      const response = await fetch(`${BASE_URL}/api/transactions?limit=${numTransactions}`);
       if (!response.ok) {
-        throw new Error("Failed to fetch transactions");
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const fetchedTransactions = await response.json();
-      setTransactions(fetchedTransactions);
-      setError(null); // Clear any previous errors
+      const data = await response.json();
+      
+      // Important: Use data.transactions instead of data directly
+      setTransactions(data.transactions);
+      setError(null);
     } catch (error) {
       console.error("Error fetching transactions:", error);
-      setError(error.message); // Set error message
-      setTransactions([]); // Clear transactions on error
+      setError(error.message);
+      setTransactions([]);
     }
   };
 
-  const progressValue = transactions.length; // Current number of displayed transactions
+  const progressValue = transactions.length;
 
   return (
     <div className="dashboard-container">
@@ -57,7 +62,12 @@ function WorkloadDashboard() {
         />
         <button onClick={handleRetrieveTransactions}>Retrieve</button>
       </div>
-      {error && <div style={{ color: 'red' }}>{error}</div>} {/* Display error if any */}
+      {error && (
+        <div style={{ color: 'red', marginBottom: '10px' }}>
+          Error: {error}
+          <p>Please check your backend connection and CORS settings.</p>
+        </div>
+      )}
       
       {/* Progress Bar */}
       <div className="progress-container">

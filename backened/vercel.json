@@ -1,0 +1,23 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "index.js",
+        "use": "@vercel/node"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/api/(.*)",
+        "dest": "index.js"
+      }
+    ],
+    "env": {
+      "DB_USER": "@db_user",
+      "DB_HOST": "@db_host",
+      "DB_NAME": "@db_name",
+      "DB_PASSWORD": "@db_password",
+      "DB_PORT": "@db_port",
+      "NODE_ENV": "production"
+    }
+  }
