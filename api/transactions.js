@@ -1,76 +1,17 @@
 // api/transactions.js
 import { Pool } from 'pg';
-import { validateHash } from './utils'; // Assuming you create a utils file for validation
 
-const pool = new Pool({
+// Consolidated connection configuration
+const getPoolConfig = () => ({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 5432,
-  ssl: { rejectUnauthorized: false }, // Adjust as necessary for your production environment
+  ssl: process.env.NODE_ENV === 'production' 
+    ? { rejectUnauthorized: false } 
+    : false
 });
-
-export default async (req, res) => {
-  if (req.method === 'POST') {
-    const { hash } = req.body;
-
-    if (!validateHash(hash)) {
-      return res.status(400).json({ 
-        error: "Invalid hash format",
-        details: "Hash must be a non-empty string of maximum 255 characters"
-      });
-    }
-
-    try {
-      const query = `
-        INSERT INTO transactions (hash) 
-        VALUES ($1) 
-        RETURNING id, hash, timestamp
-      `;
-      const result = await pool.query(query, [hash]);
-
-      // Notify new transaction if in development mode
-      if (process.env.NODE_ENV === 'development') {
-        await pool.query(`NOTIFY new_transaction, '${result.rows[0].id}'`);
-      }
-
-      res.status(201).json(result.rows[0]);
-    } catch (err) {
-      console.error("Error storing hash:", err);
-      res.status(500).json({ 
-        error: "Failed to store hash",
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
-      });
-    }
-  } else if (req.method === 'GET') {
-    const requestedLimit = parseInt(req.query.limit);
-    const limit = !isNaN(requestedLimit) ? Math.min(Math.max(1, requestedLimit), 100) : 10;
-
-    try {
-      const query = `
-        SELECT id, hash, timestamp 
-        FROM transactions 
-        ORDER BY timestamp DESC 
-        LIMIT $1
-      `;
-      const result = await pool.query(query, [limit]);
-      res.status(200).json({
-        transactions: result.rows,
-        limit: limit,
-        count: result.rows.length
-      });
-    } catch (err) {
-      console.error("Error retrieving records:", err);
-      res.status(500).json({ 
-        error: "Failed to retrieve records",
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
-      });
-    }
-  } else {
-    res.status(405).send('Method Not Allowed');
-  }
-};
 
 // Utility function for hash validation
 const validateHash = (hash) => {
@@ -82,4 +23,90 @@ const validateHash = (hash) => {
     return false;
   }
   return true;
+};
+
+// Memoize pool to prevent multiple pool creations
+let pool;
+const getPool = () => {
+  if (!pool) {
+    pool = new Pool(getPoolConfig());
+  }
+  return pool;
+};
+
+export default async (req, res) => {
+  // Enhanced CORS handling
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers', 
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  // Handle OPTIONS request
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  try {
+    // Connect to database pool
+    const pool = getPool();
+
+    if (req.method === 'GET' && req.query.type === 'count') {
+      try {
+        const countQuery = `SELECT COUNT(*) as count FROM transactions`;
+        const result = await pool.query(countQuery);
+        res.status(200).json({
+          count: parseInt(result.rows[0].count, 10)
+        });
+        return;
+      } catch (err) {
+        console.error("Error counting records:", err);
+        res.status(500).json({ 
+          error: "Failed to count records",
+          details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+        return;
+      }
+    }
+
+    if (req.method === 'GET') {
+      const requestedLimit = parseInt(req.query.limit);
+      const limit = !isNaN(requestedLimit) ? Math.min(Math.max(1, requestedLimit), 100) : 10;
+
+      try {
+        const query = `
+          SELECT id, hash, timestamp 
+          FROM transactions 
+          ORDER BY timestamp DESC 
+          LIMIT $1
+        `;
+        const result = await pool.query(query, [limit]);
+        res.status(200).json({
+          transactions: result.rows,
+          limit: limit,
+          count: result.rows.length
+        });
+        return;
+      } catch (err) {
+        console.error("Error retrieving records:", err);
+        res.status(500).json({ 
+          error: "Failed to retrieve records",
+          details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+        return;
+      }
+    }
+
+    // Default method not allowed
+    res.status(405).json({ error: 'Method Not Allowed' });
+  } catch (error) {
+    console.error("Unexpected error:", error);
+    res.status(500).json({ 
+      error: "Unexpected server error",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 };

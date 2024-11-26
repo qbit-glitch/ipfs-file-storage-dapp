@@ -36,8 +36,6 @@ function WorkloadDashboard() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      
-      // Important: Use data.transactions instead of data directly
       setTransactions(data.transactions);
       setError(null);
     } catch (error) {
