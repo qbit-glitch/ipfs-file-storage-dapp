@@ -28,7 +28,7 @@ p {
 }
 
 /* Button Styles */
-.button {
+.get-started-button{
     background-color: #f0a500; /* Primary button color */
     color: #1e1e1e; /* Dark text */
     border: none;
