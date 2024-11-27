@@ -5,6 +5,38 @@
 
 The IPFS File Storage DApp is a decentralized application built on the Ethereum Sepolia testnet, designed for securely uploading and storing files on the InterPlanetary File System (IPFS). This application allows users to upload files, store their corresponding IPFS hashes on the Ethereum blockchain, and view recent transactions. It leverages AWS PostgreSQL for transaction management and provides a user-friendly interface for seamless interaction with the blockchain and IPFS.
 
+## Sample Demo Walkthrough
+  ![Home Page](image.png)
+  - Click on `Get Started` or navigate to `Upload File` 
+
+  ![Upload File Tab](image-1.png)
+  - Choose anyfile stored locally and you will see a pop-up : `File Selected: <File Name>`
+  
+![alt text](image-2.png)
+  - Click On `Submit` button
+
+  ![Metamask Connection](image-3.png)
+  - `Metamask` will ask for connection and click on the `Connect` button
+  
+  ![IPFS Storage Confirmation](image-4.png)
+
+  ![Metamask Confirmation for storing IPFS Hash](image-5.png)
+  - `Metamask` will again ask for confirmation for storing the IPFS hash in the blockchain. Here we have used Sepolia Ethereum Testnet for testing purposes.
+  Then wait some time (~10-40 sec) for the hash to be stored in the blockchain. After successfull Storage you will be redirected to the `Home Page`.
+
+  - Navigate to the `Workload Dashboard` to view your own recent transactions. *Note*: You can view only those transactions which are done by that particular `Metamask Account`. You can see the `Total Number of Transactions` which are stored in the database.
+  - Navigate to the `Worload Dashboard`
+  
+   ![Workload Dashboard](image-6.png)
+   - Click on `Connect Metamask` and you will be shown a progress bar which will display the total number of transactions stored on the AWS RDS PostgreSQL database.
+
+   ![Metamask Connected Transactions](image-7.png)
+   - Click on `Retrieve` and write the number of transactions you want to see.
+
+  ![Transactions Record](image-8.png)
+  - Click on any transaction hash value and you will be able to see your File which is stored on IPFS.
+
+
 ## Features
 
 - **File Upload**: Users can select and upload files to IPFS, which are then pinned using Pinata.
