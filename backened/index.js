@@ -73,12 +73,16 @@ const createTable = async () => {
     CREATE TABLE IF NOT EXISTS transactions (
       id SERIAL PRIMARY KEY,
       hash VARCHAR(${MAX_HASH_LENGTH}) NOT NULL,
+      address VARCHAR(42) NOT NULL,
       timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT hash_not_empty CHECK (hash <> '')
     );
     
     CREATE INDEX IF NOT EXISTS idx_transactions_timestamp 
     ON transactions(timestamp DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_transactions_address
+    ON transactions(address);
   `;
   try {
     await pool.query(query);
@@ -100,6 +104,16 @@ const validateHash = (hash) => {
   // Optional: Add additional hash format validation
   return true;
 };
+
+// validation functions for validating address
+const validateAddress = (address) => {
+  if (!address || typeof address !== 'string') {
+    return false;
+  }
+  // Basic Ethereum address validation (0x followed by 40 hex characters)
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+};
+
 
 // Database connection check with retry mechanism
 const checkDatabaseConnection = async (retries = 5, delay = 5000) => {
@@ -149,8 +163,10 @@ const listenForNotifications = async () => {
 };
 
 // API Routes
+// POST route for transactions
+// Modify the POST route in index.js
 app.post("/api/transactions", async (req, res) => {
-  const { hash } = req.body;
+  const { hash, address } = req.body;
 
   if (!validateHash(hash)) {
     return res.status(400).json({ 
@@ -159,13 +175,20 @@ app.post("/api/transactions", async (req, res) => {
     });
   }
 
+  if (!validateAddress(address)) {
+    return res.status(400).json({ 
+      error: "Invalid address format",
+      details: "Address must be a valid Ethereum address"
+    });
+  }
+
   try {
     const query = `
-      INSERT INTO transactions (hash) 
-      VALUES ($1) 
-      RETURNING id, hash, timestamp
+      INSERT INTO transactions (hash, address) 
+      VALUES ($1, $2) 
+      RETURNING id, hash, address, timestamp
     `;
-    const result = await pool.query(query, [hash]);
+    const result = await pool.query(query, [hash, address]);
     
     if (process.env.NODE_ENV === 'development') {
       await pool.query(`NOTIFY new_transaction, '${result.rows[0].id}'`);
@@ -181,20 +204,36 @@ app.post("/api/transactions", async (req, res) => {
   }
 });
 
+// GET route to filter by user address
 app.get("/api/transactions", async (req, res) => {
   const requestedLimit = parseInt(req.query.limit);
+  const userAddress = req.query.address;
   const limit = !isNaN(requestedLimit) ? 
     Math.min(Math.max(1, requestedLimit), MAX_LIMIT) : 
     DEFAULT_LIMIT;
 
   try {
-    const query = `
-      SELECT id, hash, timestamp 
-      FROM transactions 
-      ORDER BY timestamp DESC 
-      LIMIT $1
-    `;
-    const result = await pool.query(query, [limit]);
+    let query, params;
+    if (userAddress) {
+      query = `
+        SELECT id, hash, timestamp 
+        FROM transactions 
+        WHERE address = $1
+        ORDER BY timestamp DESC 
+        LIMIT $2
+      `;
+      params = [userAddress, limit];
+    } else {
+      query = `
+        SELECT id, hash, timestamp 
+        FROM transactions 
+        ORDER BY timestamp DESC 
+        LIMIT $1
+      `;
+      params = [limit];
+    }
+
+    const result = await pool.query(query, params);
     res.status(200).json({
       transactions: result.rows,
       limit: limit,

@@ -3,9 +3,9 @@ import { ethers } from "ethers";
 import { uploadToPinata } from "./config";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate } from 'react-router-dom';
 import "./App.css";
-import  axios  from "axios";
+import axios from "axios";
 
 function UploadFile() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -13,10 +13,36 @@ function UploadFile() {
   const [storedHash, setStoredHash] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [recentTransactions, setRecentTransactions] = useState([]);
-  const navigate = useNavigate(); // Initialize useNavigate
+  const [userAddress, setUserAddress] = useState(null);
+  const navigate = useNavigate();
 
-  const contractAddress = "0x9725e10a6aeb15a936d8d3e4d7d84945c35015ff";
+  const contractAddress = "0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8";
   const contractABI = [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "uploader",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "ipfsHash",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "FileUploaded",
+      "type": "event"
+    },
     {
       "inputs": [
         {
@@ -25,19 +51,72 @@ function UploadFile() {
           "type": "string"
         }
       ],
-      "name": "setIPFSHash",
+      "name": "uploadFile",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "getIPFSHash",
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_index",
+          "type": "uint256"
+        }
+      ],
+      "name": "getUserFileByIndex",
       "outputs": [
         {
-          "internalType": "string",
+          "components": [
+            {
+              "internalType": "string",
+              "name": "ipfsHash",
+              "type": "string"
+            },
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct IPFSStorage.FileInfo",
           "name": "",
-          "type": "string"
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getUserFiles",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "ipfsHash",
+              "type": "string"
+            },
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct IPFSStorage.FileInfo[]",
+          "name": "",
+          "type": "tuple[]"
         }
       ],
       "stateMutability": "view",
@@ -53,6 +132,24 @@ function UploadFile() {
     }
   };
 
+
+  const connectWallet = async () => {
+    try {
+      if (!window.ethereum) {
+        toast.error("Please install MetaMask!");
+        return null;
+      }
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const address = accounts[0];
+      setUserAddress(address);
+      return address;
+    } catch (error) {
+      console.error("Error connecting wallet:", error);
+      toast.error("Failed to connect wallet");
+      return null;
+    }
+  };
+
   const handleSubmission = async () => {
     try {
       if (!selectedFile) {
@@ -62,13 +159,12 @@ function UploadFile() {
 
       setIsLoading(true);
       
-      // Request account access
-      if (!window.ethereum) {
-        toast.error("Please install MetaMask!");
+      // Ensure wallet is connected
+      const address = userAddress || await connectWallet();
+      if (!address) {
+        toast.error("Please connect your wallet first!");
         return;
       }
-      
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
 
       // Upload to IPFS via Pinata
       const response = await uploadToPinata(selectedFile);
@@ -80,13 +176,14 @@ function UploadFile() {
         // Store hash on blockchain
         await storeHashOnBlockchain(response.IpfsHash);
 
+        // Store the hash and address in the database
+        await axios.post(`${process.env.REACT_APP_API_URL || "http://localhost:5000"}/api/transactions`, {
+          hash: response.IpfsHash,
+          address: address
+        });
+
         // Add to recent transactions
         setRecentTransactions(prev => [...prev, response.IpfsHash]);
-
-        // Store the hash in the database
-        await axios.post("http://localhost:5000/api/transactions", {
-        hash: response.IpfsHash,
-        });
 
         // Redirect to home after successful upload
         navigate("/");
@@ -104,8 +201,8 @@ function UploadFile() {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(contractAddress, contractABI, signer);
-
-      const tx = await contract.setIPFSHash(hash);
+  
+      const tx = await contract.uploadFile(hash);
       toast.info("Storing hash on blockchain...");
       
       await tx.wait();
